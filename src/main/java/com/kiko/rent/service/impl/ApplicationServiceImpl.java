@@ -7,6 +7,7 @@ import com.kiko.rent.exception.ConflictException;
 import com.kiko.rent.mapper.ApplicationMapper;
 import com.kiko.rent.model.Application;
 import com.kiko.rent.model.enums.ApplicationStatus;
+import com.kiko.rent.model.enums.UserRole;
 import com.kiko.rent.repository.ApplicationDAO;
 import com.kiko.rent.repository.FlatDAO;
 import com.kiko.rent.repository.UserDAO;
@@ -42,6 +43,8 @@ public class ApplicationServiceImpl implements ApplicationService {
         FlatEntity flat = flatDAO.findById(app.getFlatId())
                 .orElseThrow(() -> new ConflictException("No flat was found"));
         validate(app);
+        validateUsers(oldUser, newUser);
+        validateFlat(oldUser, flat);
         ApplicationEntity inputEntity = mapper.toEntity(app);
 
         inputEntity.setNewUser(newUser);
@@ -101,6 +104,20 @@ public class ApplicationServiceImpl implements ApplicationService {
         }
         if (dao.countByTimeSlotAndDateAndFlat(app.getTimeSlot(), app.getDate(), app.getFlatId(), app.getStatus().name()) > 0) {
             throw new ConflictException("Current time slot is taken");
+        }
+    }
+
+    private void validateUsers(UserEntity oldUser, UserEntity newUser) {
+        if (!oldUser.getRole().equals(UserRole.CURRENT_TENANT)) {
+            throw new ConflictException("Current user role is incorrect");
+        }
+        if (!newUser.getRole().equals(UserRole.NEW_TENANT)) {
+            throw new ConflictException("New user role is incorrect");
+        }
+    }
+    private void validateFlat(UserEntity oldUser, FlatEntity flatEntity){
+        if (!flatEntity.getUser().getId().equals(oldUser.getId())){
+            throw new ConflictException("Current user is not the owner of the flat");
         }
     }
 }
